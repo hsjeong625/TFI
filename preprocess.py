@@ -105,25 +105,6 @@ def crop_frames_from_video(mp4_path, json_path, output_dir):
     cap.release()
 
 if __name__ == '__main__':
-
-    # json_file_paths = [
-    #     "data/P000, CNA, phase0, Test, trialSession-5, 180s, egocamera1_merged.json",
-    #     "data/P000, CNA, phase0, Test, trialSession-5, 180s, egocamera2_merged.json",
-    #     "data/P000, CNA, phase0, Test, trialSession-5, 180s, egocamera3_merged.json"
-    # ]
-
-    # output_dirs = [
-    #     "data/P000, CNA, phase0, Test, trialSession-5, 180s, egocamera1_original/",
-    #     "data/P000, CNA, phase0, Test, trialSession-5, 180s, egocamera2_original/",
-    #     "data/P000, CNA, phase0, Test, trialSession-5, 180s, egocamera3_original/",
-    # ]
-
-    # video_paths = [
-    #     "data/P000, CNA, phase0, Test, trialSession-5, 180s, egocamera1_original.mp4",
-    #     "data/P000, CNA, phase0, Test, trialSession-5, 180s, egocamera2_original.mp4",
-    #     "data/P000, CNA, phase0, Test, trialSession-5, 180s, egocamera3_original.mp4",
-    # ]
-
     json_file_paths, csv_file_paths, video_paths, output_dirs = [], [], [], []
     action_label = ['CPinch','CSide1','CSide2','CSide3']
     force_label = ['Negative1','Negative2','Negative3','Positive1','Positive2','Positive3','Positive4','Positive5','Positive6']
@@ -156,12 +137,4 @@ if __name__ == '__main__':
 
     for mp4_path, json_path, output_dir in zip(video_paths, json_file_paths, output_dirs):
         crop_frames_from_video(mp4_path, json_path, output_dir)
-
-
-    # for i in range(0, 5):
-    #     for j in range(1, 4):
-    #         mp4_path = f'data/P000, CNA, phase0, Positive, trialSession-{i}, 180s, egocamera{j}_original.mp4'
-    #         json_path = f'data/P000, CNA, phase0, Positive, trialSession-{i}, 180s, egocamera{j}_merged.json'
-    #         output_dir = f'data/P000, CNA, phase0, Positive, trialSession-{i}, 180s, egocamera{j}_original/'
-
-    #         crop_frames_from_video(mp4_path, json_path, output_dir)
+        

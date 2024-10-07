@@ -3,11 +3,11 @@ import glob
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from PIL import Image
 from model import UperNet
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -34,7 +34,10 @@ class CustomDataset(Dataset):
         if self.transform:
             frame = self.transform(frame)
 
-        target = torch.clip(target, 0, 300) / 300.
+        # Binarize the target using a threshold
+        threshold = 150  # You can adjust this threshold based on dataset
+        target = torch.clip(target, 0, 300)
+        target = (target >= threshold).float()
 
         return frame, thumb_pos, target
 
@@ -131,10 +134,14 @@ if __name__ == '__main__':
             x_coords = torch.round(thumb_pos[:, 0] // 8).long()
             y_coords = torch.round(thumb_pos[:, 1] // 8).long()
 
-            # Gather the output values at the specified coordinates
-            selected_outputs = outputs[torch.arange(batch_size), 0:1, y_coords, x_coords]
+            # Ensure coordinates are within the output dimensions
+            x_coords = x_coords.clamp(0, width - 1)
+            y_coords = y_coords.clamp(0, height - 1)
 
-            loss = criterion(selected_outputs, targets)
+            # Gather the output values at the specified coordinates
+            selected_outputs = outputs[torch.arange(batch_size), 0, y_coords, x_coords]
+
+            loss = criterion(selected_outputs, targets.squeeze())
             loss.backward()
             optimizer.step()
 
@@ -143,7 +150,7 @@ if __name__ == '__main__':
         print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}')
 
         # Evaluation
-        if num_epochs % 5 != 0:
+        if (epoch + 1) % 5 != 0:
             continue
 
         model.eval()
@@ -156,21 +163,31 @@ if __name__ == '__main__':
                 thumb_pos = thumb_pos.to(device)
                 targets = targets.to(device)
 
-                outputs = torch.nn.functional.sigmoid(model(inputs))
+                outputs = model(inputs)
 
                 batch_size, _, height, width = outputs.shape
+
                 x_coords = torch.round(thumb_pos[:, 0] // 8).long()
                 y_coords = torch.round(thumb_pos[:, 1] // 8).long()
-                selected_outputs = outputs[torch.arange(batch_size), 0:1, y_coords, x_coords]
+
+                # Ensure coordinates are within the output dimensions
+                x_coords = x_coords.clamp(0, width - 1)
+                y_coords = y_coords.clamp(0, height - 1)
+
+                selected_outputs = outputs[torch.arange(batch_size), 0, y_coords, x_coords]
+
+                probs = torch.sigmoid(selected_outputs)
+                preds = (probs >= 0.5).float()
 
                 all_targets.extend(targets.cpu().numpy())
-                all_predictions.extend(selected_outputs.cpu().numpy())
+                all_predictions.extend(preds.cpu().numpy())
 
         all_targets = np.array(all_targets)
         all_predictions = np.array(all_predictions)
 
-        mae = mean_absolute_error(all_targets, all_predictions)
-        mse = mean_squared_error(all_targets, all_predictions)
-        r2 = r2_score(all_targets, all_predictions)
+        accuracy = accuracy_score(all_targets, all_predictions)
+        precision = precision_score(all_targets, all_predictions, zero_division=0)
+        recall = recall_score(all_targets, all_predictions, zero_division=0)
+        f1 = f1_score(all_targets, all_predictions, zero_division=0)
 
-        print(f'MAE: {mae:.4f}, MSE: {mse:.4f}, R^2: {r2:.4f}')
+        print(f'Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1:.4f}')
